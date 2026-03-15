@@ -12,13 +12,11 @@ This project reproduces the **WVN perception-learning stack** with phone video, 
 
 ### DINOv2 + SLIC segmentation
 
-https://github.com/user-attachments/assets/demo_slic.mp4
 
 > Left: **RAW** | Middle: **SLIC** (before adaptation) | Right: **After SLIC** (after adaptation)
 
 ### DINOv2 + STEGO segmentation
 
-https://github.com/user-attachments/assets/demo_stego.mp4
 
 > Left: **RAW** | Middle: **STEGO** (before adaptation) | Right: **After STEGO** (after adaptation)
 
