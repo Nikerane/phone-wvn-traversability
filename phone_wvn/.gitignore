@@ -1,0 +1,12 @@
+# Data (too large for git)
+data/videos/
+data/frames/
+data/frames_pretrain/
+data/pseudo_labels/
+
+# Outputs (generated, reproducible)
+outputs/
+
+# Checkpoints
+checkpoints/
+outputs/**/*.pt
