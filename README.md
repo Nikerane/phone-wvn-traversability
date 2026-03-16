@@ -37,7 +37,7 @@ Phone camera video
 
 This follows the same core idea as the WVN paper: **pretrained self-supervised features + online self-supervision** for fast traversability learning — but adapted for offline phone video without robot hardware.
 ---
-
+```
 For each chunk of 100 frames:
     Save current head weights (snapshot)
     For each frame in chunk:
@@ -51,6 +51,7 @@ For each chunk of 100 frames:
     Check: did average loss get worse?
         Yes → rollback to snapshot
         No  → keep updated weights
+```
   
 ---
 
