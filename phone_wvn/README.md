@@ -10,17 +10,27 @@ This project reproduces the **WVN perception-learning stack** with phone video, 
 
 ## Demo Results
 
-### DINOv2 + SLIC segmentation
+### DINOv2 + SLIC
 
-https://github.com/user-attachments/assets/demo_slic.mp4
+https://github.com/user-attachments/assets/demo_dinov2_slic.mp4
 
-> Left: **RAW** | Middle: **SLIC** (before adaptation) | Right: **After SLIC** (after adaptation)
+> Left: **Input Video** | Right: **DINOv2 + SLIC** (pretrained head, segment-level prediction)
 
-### DINOv2 + STEGO segmentation
+### STEGO features + STEGO segmentation
 
 https://github.com/user-attachments/assets/demo_stego.mp4
 
-> Left: **RAW** | Middle: **STEGO** (before adaptation) | Right: **After STEGO** (after adaptation)
+> Left: **Input Video** | Right: **STEGO feat + seg** (pretrained head, segment-level prediction)
+
+### Side-by-side: DINOv2+SLIC vs STEGO
+
+https://github.com/user-attachments/assets/demo_dinov2_vs_stego.mp4
+
+> Left: **Input Video** | Middle: **DINOv2 + SLIC** | Right: **STEGO feat + seg**
+
+All use pretrained heads only (no adaptation on this video). The comparison shows which feature+segmentation combination produces better traversability maps out of the box.
+
+**Finding:** DINOv2+SLIC gives cleaner, more locally grounded predictions. STEGO's semantic grouping over-propagates — if one region is mislabeled, all visually similar regions across the image inherit that error.
 
 ---
 
@@ -31,13 +41,56 @@ Phone camera video
   → Extract frames
   → Pretrained feature extraction (DINOv2, frozen)
   → Region segmentation (SLIC / Grid / STEGO)
-  → Traversability prediction (lightweight MLP head)
+  → Pool features per region (average DINOv2 features within each segment)
+  → Traversability prediction per region (lightweight MLP head)
   → Weak supervision from walking demonstration priors
   → Chunked online adaptation of traversability head
   → Traversability overlay on video (green = safe, red = avoid)
 ```
 
 This follows the same core idea as the WVN paper: **pretrained self-supervised features + online self-supervision** for fast traversability learning — but adapted for offline phone video without robot hardware.
+
+---
+
+## How DINOv2 and SLIC Are Combined
+
+DINOv2 and SLIC run **independently** on the same image, then their outputs are merged:
+
+```
+Input frame (224x224 RGB)
+  │
+  ├──→ DINOv2 (frozen ViT backbone)
+  │      Produces a dense feature map: one 384-dim vector per image patch
+  │      These features encode texture, shape, and implicit semantic meaning
+  │
+  └──→ SLIC (classical algorithm on raw RGB pixels)
+         Groups nearby pixels with similar color into ~120 superpixels
+         Each superpixel is a small coherent region (e.g., a patch of grass, a stone)
+         SLIC does NOT use any neural network — it only sees pixel colors and positions
+  │
+  ▼
+  Combine: for each SLIC superpixel, average all the DINOv2 feature vectors
+           of the pixels that belong to that superpixel
+  │
+  ▼
+  Result: one 384-dim feature vector per superpixel region
+  │
+  ▼
+  Traversability head (MLP): predicts a traversability score (0–1) per region
+  │
+  ▼
+  Project back to pixels: each pixel gets the score of its superpixel
+  │
+  ▼
+  Color overlay: green (safe) → yellow (uncertain) → red (avoid)
+```
+
+**Why this combination works well:**
+- **DINOv2** provides rich, high-level features that capture what a region *is* (grass vs trunk vs path) — trained on millions of images via self-supervised learning.
+- **SLIC** provides clean, boundary-aware grouping that respects edges in the image — so the prediction doesn't bleed across object boundaries.
+- Together: smart features + clean regions = locally accurate traversability maps.
+
+**In contrast, STEGO** does both steps internally (features + semantic segmentation from the same neural network). This can be powerful but also over-propagates errors: if one region is mislabeled, all visually similar regions across the entire image inherit that error.
 
 ---
 
